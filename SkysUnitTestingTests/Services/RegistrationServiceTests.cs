@@ -1,47 +1,49 @@
-﻿using SkysUnitTesting.Models;
+﻿using Moq;
+using SkysUnitTesting.Models;
 using SkysUnitTesting.Services;
 using static SkysUnitTesting.Services.IRegistrationService;
 
 namespace SkysUnitTestingTests.Services;
 
-public class FakeUserRepository : IUserRegistrationRepository
-{
-    public bool CreateNewHasBeenCalled = false;
-    public List<string> RegisteredEmails = new List<string>();
-    public UserRegistration Get(string email)
-    {
-        if (RegisteredEmails.Contains(email))
-            return new UserRegistration();
-        return null;
-    }
+//public class FakeUserRepository : IUserRegistrationRepository
+//{
+//    public bool CreateNewHasBeenCalled = false;
+//    public List<string> RegisteredEmails = new List<string>();
+//    public UserRegistration Get(string email)
+//    {
+//        if (RegisteredEmails.Contains(email))
+//            return new UserRegistration();
+//        return null;
+//    }
 
-    public void CreateNew(string email)
-    {
-        CreateNewHasBeenCalled = true;
-    }
-}
+//    public void CreateNew(string email)
+//    {
+//        CreateNewHasBeenCalled = true;
+//    }
+//}
 
-public class FakeEmailService : IEmailService
-{
-    public bool SendEmailhasBeenCalled = false;
-    public void SendEmail(string email)
-    {
-        SendEmailhasBeenCalled = true;
-    }
-}
+//public class FakeEmailService : IEmailService
+//{
+//    public bool SendEmailhasBeenCalled = false;
+//    public void SendEmail(string email)
+//    {
+//        SendEmailhasBeenCalled = true;
+//    }
+//}
 
 [TestClass]
 public class RegistrationServiceTests
 {
     private RegistrationService sut;
-    private FakeUserRepository userRepository;
-    private FakeEmailService emailService;
+    private Mock<IUserRegistrationRepository> userRepositoryMock;
+    private Mock<IEmailService> emailServiceMock;
 
     public RegistrationServiceTests()
     {
-        userRepository = new FakeUserRepository();
-        emailService = new FakeEmailService();
-        sut = new RegistrationService(userRepository, emailService);
+        userRepositoryMock = new Mock<IUserRegistrationRepository>();
+        emailServiceMock = new Mock<IEmailService>();
+
+        sut = new RegistrationService(userRepositoryMock.Object, emailServiceMock.Object);
     }
 
     [TestMethod]
@@ -62,7 +64,7 @@ public class RegistrationServiceTests
     {
         //ARRANGE
         var email = "aaa@hej.se";
-        userRepository.RegisteredEmails.Add("aaa@hej.se");
+        userRepositoryMock.Setup(userRepository => userRepository.Get(email)).Returns(new UserRegistration());
         
         //ACT
         var result = sut.RegisterUser(email);
@@ -77,13 +79,12 @@ public class RegistrationServiceTests
     {
         //ARRANGE
         var email = "aaa@hej.se";
-        userRepository.CreateNewHasBeenCalled = false;
 
         //ACT
         var result = sut.RegisterUser(email);
 
         //ASSERT
-        Assert.IsTrue(userRepository.CreateNewHasBeenCalled);
+        userRepositoryMock.Verify(userRep=> userRep.CreateNew(email), Times.Once());
 
     }
 
@@ -92,13 +93,12 @@ public class RegistrationServiceTests
     {
         //ARRANGE
         var email = "aaa@hej.se";
-        emailService.SendEmailhasBeenCalled = false;
 
         //ACT
         var result = sut.RegisterUser(email);
 
         //ASSERT
-        Assert.IsTrue(emailService.SendEmailhasBeenCalled);
+        emailServiceMock.Verify(emailSer=> emailSer.SendEmail(email), Times.Once());
 
     }
 
